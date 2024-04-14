@@ -11,6 +11,7 @@ import (
 	"github.com/mjarkk/mongomock"
 )
 
+// populateTargetDB0 populates the target database with the given number of records !DEPRECATED!
 func populateTargetDB0(recCount int) mongomock.Collection {
 	db := mongomock.NewDB()
 	collection := db.Collection("transactions")
@@ -30,35 +31,7 @@ func populateTargetDB0(recCount int) mongomock.Collection {
 
 }
 
-// type PgxIface interface {
-// 	Begin(context.Context) (pgx.Tx, error)
-// 	Close(context.Context) error
-// }
-
-// func recordStats(db PgxIface, userID, productID int) (err error) {
-// 	tx, err := db.Begin(context.Background())
-// 	if err != nil {
-// 		return
-// 	}
-// 	defer func() {
-// 		switch err {
-// 		case nil:
-// 			err = tx.Commit(context.Background())
-// 		default:
-// 			_ = tx.Rollback(context.Background())
-// 		}
-// 	}()
-// 	sql := "UPDATE products SET views = views + 1"
-// 	if _, err = tx.Exec(context.Background(), sql); err != nil {
-// 		return
-// 	}
-// 	sql = "INSERT INTO product_viewers (user_id, product_id) VALUES ($1, $2)"
-// 	if _, err = tx.Exec(context.Background(), sql, userID, productID); err != nil {
-// 		return
-// 	}
-// 	return
-// }
-
+// populateSourceDB populates the source DB (csv file!) with the given number of records
 func populateSourceDB(recCount int, file_sourceDB string) {
 
 	csvFile, err := os.Create(file_sourceDB)
@@ -75,7 +48,7 @@ func populateSourceDB(recCount int, file_sourceDB string) {
 	for n < recCount {
 		pmnt := Data.GenPayment()
 
-		w.Write([]string{pmnt.Time.String(), pmnt.Sender_Account, pmnt.Receiver_Account, pmnt.TransactionID, fmt.Sprintf("%.2f", pmnt.Amount), pmnt.Currency, pmnt.Reference})
+		w.Write([]string{fmt.Sprintf("%d", n), pmnt.Time.String(), pmnt.Sender_Account, pmnt.Receiver_Account, pmnt.TransactionID, fmt.Sprintf("%.2f", pmnt.Amount), pmnt.Currency, pmnt.Reference})
 
 		n++
 	}
@@ -84,8 +57,8 @@ func populateSourceDB(recCount int, file_sourceDB string) {
 
 }
 
-func populateTargetDB(file_sourceDB string) mongomock.Collection {
-
+// getSourceData reads the source data from a csv file and returns it as a slice of strings
+func getSourceData(file_sourceDB string) [][]string {
 	csvFile, err := os.Open(file_sourceDB)
 
 	if err != nil {
@@ -102,6 +75,14 @@ func populateTargetDB(file_sourceDB string) mongomock.Collection {
 		log.Fatalf("Error while reading records: %s", err)
 	}
 
+	return records
+}
+
+// populateTargetDB copies the contents of the target DB with the contents of the source DB
+func populateTargetDB(file_sourceDB string) mongomock.Collection {
+
+	records := getSourceData(file_sourceDB)
+
 	db := mongomock.NewDB()
 	collection := db.Collection("transactions")
 
@@ -111,31 +92,7 @@ func populateTargetDB(file_sourceDB string) mongomock.Collection {
 		if err != nil {
 			log.Fatal(err)
 		}
-
 	}
+
 	return *collection
 }
-
-// func main0() {
-// 	db := mongomock.NewDB()
-// 	collection := db.Collection("users")
-// 	err := collection.Insert(User{
-// 		ID:    primitive.NewObjectID(),
-// 		Name:  "test",
-// 		Email: "example@example.org",
-// 	})
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	// nr, _ := db.Collection("users").Count(bson.M{})
-// 	// fmt.Printf("Found %d items", nr)
-
-// 	user := User{}
-// 	err = collection.FindFirst(&user, bson.M{"username": "test"})
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	fmt.Printf("Found user: %+v\n", user)
-// 	// After exit the database data is gone
-// }

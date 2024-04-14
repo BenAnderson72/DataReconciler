@@ -36,14 +36,13 @@ func Test_CompareDE1(t *testing.T) {
 
 func Test_CompareDE2(t *testing.T) {
 
-	pmnt1 := paymentType{
+	pmnt1 := PaymentType{
 		Sender_Account:   "1234",
 		Receiver_Account: "5678",
 		TransactionID:    "ABC123",
 		Amount:           410.20,
-		// Currency:      fake.Currency().Currency(),
-		Currency:  "GBP",
-		Reference: "REF1",
+		Currency:         "GBP",
+		Reference:        "REF1",
 	}
 
 	pmnt2 := pmnt1
@@ -58,23 +57,41 @@ func Test_CompareDE2(t *testing.T) {
 
 func Test_CompareDiff1(t *testing.T) {
 
-	pmnt1 := paymentType{
+	pmnt1 := PaymentType{
 		Sender_Account:   "1234",
 		Receiver_Account: "5678",
 		TransactionID:    "ABC123",
 		Amount:           410.20,
-		// Currency:      fake.Currency().Currency(),
-		Currency:  "GBP",
-		Reference: "REF1",
+		Currency:         "GBP",
+		Reference:        "REF1",
 	}
 
 	pmnt2 := pmnt1
 
-	pmnt2.Sender_Account = "12345"
+	pmnt2.Sender_Account += "5"
 
 	changelog, _ := diff.Diff(pmnt1, pmnt2)
 
-	fmt.Printf("%d", len(changelog))
+	if len(changelog) != 0 {
+		t.Errorf("%v", changelog)
+	}
+}
+
+func Test_CompareDiff2(t *testing.T) {
+
+	values := []string{"2024-04-14 07:20:17.044182591 +0100 BST", "9277785356448308", "6517378067341210", "10362433-0fb8-475a-9587-36983e3f5cc6", "404.59", "USD", "REF 5135"}
+
+	pmnt1 := LoadPayment(values)
+
+	pmnt2 := pmnt1
+
+	pmnt2.Sender_Account += " MESS"
+
+	changelog, _ := diff.Diff(pmnt1, pmnt2)
+
+	if len(changelog) != 0 {
+		t.Errorf("%v", changelog)
+	}
 }
 
 func Test_LoadPayment(t *testing.T) {

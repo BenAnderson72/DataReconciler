@@ -1,14 +1,20 @@
 package main
 
 import (
+	"fmt"
+	"log"
+	"math/rand/v2"
+	"slices"
+	"strings"
 	"testing"
 
+	Data "github.com/BenAnderson72/DataReconciler/data"
+	"github.com/mjarkk/mongomock"
+	"github.com/r3labs/diff/v3"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
 func Test_populateTargetDB0(t *testing.T) {
-
-	recCount := 100
 
 	collection := populateTargetDB0(recCount)
 
@@ -21,15 +27,108 @@ func Test_populateTargetDB0(t *testing.T) {
 
 }
 
+func corruptTargetDB(file_sourceDB string, recCount int, collection *mongomock.Collection) {
+
+	records := getSourceData(file_sourceDB)
+
+	// Corrupt recCount random records on target DB
+	txs := []string{}
+	n := 0
+	for n < recCount {
+		i := rand.IntN(1000)
+		tid := records[i][3]
+		// make sure they are unique
+		for slices.Contains(txs, tid) {
+			i = rand.IntN(1000)
+			tid = records[i][3]
+		}
+
+		pt := Data.PaymentType{}
+		err := collection.FindFirst(&pt, bson.M{"transaction_id": tid})
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		pt.Amount = 0
+		pt.Reference += " CORRUPT"
+
+		err = collection.ReplaceFirst(bson.M{"transaction_id": tid}, pt)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		txs = append(txs, tid)
+		n++
+	}
+
+}
+
+// This method populates the target mongoDB from the source DB (source_db.csv)
 func Test_populateTargetDB(t *testing.T) {
 
 	collection := populateTargetDB(file_sourceDB)
 
 	nr, _ := collection.Count(bson.M{})
-	// fmt.Printf("Found %d items", nr)
 
-	if nr != uint64(1000) {
+	// Check record counts
+	if nr != uint64(recCount) {
 		t.Errorf("Found %d items", nr)
+	}
+
+}
+
+// This method populates the target mongoDB from the source DB (source_db.csv)
+func Test_reconcile(t *testing.T) {
+
+	collection := populateTargetDB(file_sourceDB)
+
+	nr, _ := collection.Count(bson.M{})
+
+	// Check record counts
+	if nr != uint64(recCount) {
+		t.Errorf("Found %d items", nr)
+	}
+
+	corruptTargetDB(file_sourceDB, 10, &collection)
+
+	records := getSourceData(file_sourceDB)
+
+	// px := Data.PaymentType{}
+	// _ = collection.FindFirst(&px, bson.M{"transaction_id": txs[0]})
+	// fmt.Print(px.Amount)
+
+	for _, rec := range records {
+		pt := Data.PaymentType{}
+
+		// Check Transaction IDs exist
+		err := collection.FindFirst(&pt, bson.M{"transaction_id": rec[3]})
+
+		// if txs[0] == rec[3] {
+		// 	pt.Sender_Account += " MESSED WITH"
+		// }
+
+		if strings.HasSuffix(pt.Reference, "CORRUPT") {
+			fmt.Println("here")
+		}
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		ps := Data.LoadPayment(rec)
+
+		changelog, _ := diff.Diff(ps, pt)
+
+		if len(changelog) != 0 {
+			t.Errorf("%v", changelog)
+		}
+
+		// if !reflect.DeepEqual(ps, pt) {
+		// 	t.Errorf("expected (%v) got (%v)", ps, pt)
+		// }
+
 	}
 
 }
