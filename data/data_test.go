@@ -10,7 +10,7 @@ import (
 
 func Test_GenSourceData(t *testing.T) {
 
-	pmnt := GenPaymentSource()
+	pmnt := GenPayment()
 
 	fmt.Printf("%+v", pmnt)
 
@@ -24,9 +24,9 @@ func Test_GenSourceData(t *testing.T) {
 
 func Test_CompareDE1(t *testing.T) {
 
-	pmnt1 := GenPaymentSource()
+	pmnt1 := GenPayment()
 
-	pmnt2 := GenPaymentSource()
+	pmnt2 := GenPayment()
 
 	if !reflect.DeepEqual(pmnt1, pmnt2) {
 		t.Errorf("expected (%v) got (%v)", pmnt1, pmnt2)

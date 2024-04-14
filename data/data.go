@@ -1,7 +1,11 @@
 package Data
 
 import (
+	"fmt"
+	"log"
 	"math"
+	"math/rand"
+	"os"
 	"time"
 
 	"github.com/jaswdr/faker/v2"
@@ -25,9 +29,12 @@ func roundFloat(val float64, precision uint) float64 {
 	return math.Round(val*ratio) / ratio
 }
 
-func GenPaymentSource() paymentType {
+func GenPayment() paymentType {
 
-	fake := faker.New()
+	// Randomise
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	fake := faker.NewWithSeed(r)
 
 	// get last (t0) and next (t1) midnight timestamps
 	loc, _ := time.LoadLocation("Europe/London")
@@ -40,13 +47,23 @@ func GenPaymentSource() paymentType {
 		Sender_Account:   fake.Payment().CreditCardNumber(),
 		Receiver_Account: fake.Payment().CreditCardNumber(),
 		TransactionID:    fake.UUID().V4(),
-		Amount:           roundFloat(fake.Float64(2, 0, 666), 2),
+		Amount:           roundFloat(fake.Float64(99, 0, 666), 2),
 		// Currency:      fake.Currency().Currency(),
 		Currency:  fake.RandomStringElement([]string{"GBP", "USD"}),
-		Reference: fake.Lorem().Text(20),
+		Reference: fmt.Sprintf("REF %d", fake.Int16Between(0, 9999)),
 	}
 
 	// fake.Struct().Fill(&pmnt)
 
 	return pmnt
+}
+
+func WritePaymentToSource(pmnt paymentType, filename string) {
+
+	csvFile, err := os.Create("employee.csv")
+	if err != nil {
+		log.Fatalf("failed creating file: %s", err)
+	}
+	csvFile.Close()
+
 }

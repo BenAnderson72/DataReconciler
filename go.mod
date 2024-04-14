@@ -4,10 +4,15 @@ go 1.22.2
 
 require (
 	github.com/golang/snappy v0.0.4 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
+	github.com/jackc/pgx/v5 v5.5.1 // indirect
+	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/jaswdr/faker/v2 v2.1.0 // indirect
 	github.com/klauspost/compress v1.17.8 // indirect
 	github.com/mjarkk/mongomock v0.0.0-20230619160045-6439478855a8 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
+	github.com/pashagolub/pgxmock/v3 v3.3.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/r3labs/diff/v3 v3.0.1 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
