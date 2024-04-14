@@ -1,33 +1,35 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"math/rand/v2"
 	"slices"
-	"strings"
 	"testing"
 
 	Data "github.com/BenAnderson72/DataReconciler/data"
 	"github.com/mjarkk/mongomock"
-	"github.com/r3labs/diff/v3"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func Test_populateTargetDB0(t *testing.T) {
+var recCount int = 1000
+var file_sourceDB string = "./data/source_db.csv"
 
-	collection := populateTargetDB0(recCount)
+// func Test_populateTargetDB0(t *testing.T) {
 
-	nr, _ := collection.Count(bson.M{})
-	// fmt.Printf("Found %d items", nr)
+// 	collection := populateTargetDB0(recCount)
 
-	if nr != uint64(recCount) {
-		t.Errorf("Found %d items", nr)
-	}
+// 	nr, _ := collection.Count(bson.M{})
+// 	// fmt.Printf("Found %d items", nr)
 
-}
+// 	if nr != uint64(recCount) {
+// 		t.Errorf("Found %d items", nr)
+// 	}
 
-func corruptTargetDB(file_sourceDB string, recCount int, collection *mongomock.Collection) {
+// }
+
+// corruptSourceDB corrupts the source DB (csv file!) by recCount # of records to give us something to reconcile
+// it returns the ids of the corrupt records
+func corruptTargetDB(file_sourceDB string, recCount int, collection *mongomock.Collection) []string {
 
 	records := getSourceData(file_sourceDB)
 
@@ -63,9 +65,11 @@ func corruptTargetDB(file_sourceDB string, recCount int, collection *mongomock.C
 		n++
 	}
 
+	return txs
+
 }
 
-// This method populates the target mongoDB from the source DB (source_db.csv)
+// This test method populates the target mongoDB from the source DB (source_db.csv)
 func Test_populateTargetDB(t *testing.T) {
 
 	collection := populateTargetDB(file_sourceDB)
@@ -79,117 +83,87 @@ func Test_populateTargetDB(t *testing.T) {
 
 }
 
-// This method populates the target mongoDB from the source DB (source_db.csv)
+// This test method populates the target mongoDB from the source DB (source_db.csv)
+// corrupts the source DB (csv file!) by recCount # of records
+// reconciles the records by count and data (using data.diff) and reports diffs to a mock mongo store
+// The abiding test is to ensure that the diffs are expected
 func Test_reconcile(t *testing.T) {
 
-	collection := populateTargetDB(file_sourceDB)
+	targetCollection := populateTargetDB(file_sourceDB)
 
-	nr, _ := collection.Count(bson.M{})
+	// Corrupt 10 records on target DB
+	corruptedTxs := corruptTargetDB(file_sourceDB, 10, &targetCollection)
 
-	// Check record counts
-	if nr != uint64(recCount) {
+	sourceRecords := getSourceData(file_sourceDB)
+
+	reconCol := reconcileRecords(sourceRecords, targetCollection)
+
+	nr, _ := reconCol.Count(bson.M{})
+
+	// Reconcile record counts
+	if nr != uint64(len(corruptedTxs)) {
 		t.Errorf("Found %d items", nr)
 	}
 
-	corruptTargetDB(file_sourceDB, 10, &collection)
-
-	records := getSourceData(file_sourceDB)
-
-	// px := Data.PaymentType{}
-	// _ = collection.FindFirst(&px, bson.M{"transaction_id": txs[0]})
-	// fmt.Print(px.Amount)
-
-	for _, rec := range records {
-		pt := Data.PaymentType{}
+	// Check all out txids are found
+	for _, txid := range corruptedTxs {
+		pr := PaymentRecon{}
 
 		// Check Transaction IDs exist
-		err := collection.FindFirst(&pt, bson.M{"transaction_id": rec[3]})
-
-		// if txs[0] == rec[3] {
-		// 	pt.Sender_Account += " MESSED WITH"
-		// }
-
-		if strings.HasSuffix(pt.Reference, "CORRUPT") {
-			fmt.Println("here")
-		}
+		err := reconCol.FindFirst(&pr, bson.M{"transaction_id": txid})
 
 		if err != nil {
-			log.Fatal(err)
+			t.Fatal(err)
 		}
-
-		ps := Data.LoadPayment(rec)
-
-		changelog, _ := diff.Diff(ps, pt)
-
-		if len(changelog) != 0 {
-			t.Errorf("%v", changelog)
-		}
-
-		// if !reflect.DeepEqual(ps, pt) {
-		// 	t.Errorf("expected (%v) got (%v)", ps, pt)
-		// }
 
 	}
 
 }
 
-var recCount int = 1000
-var file_sourceDB string = "./data/source_db.csv"
+// This test method populates the target mongoDB from the source DB (source_db.csv)
+// func Test_reconcile0(t *testing.T) {
 
+// 	targetCollection := populateTargetDB(file_sourceDB)
+
+// 	nr, _ := targetCollection.Count(bson.M{})
+
+// 	// Reconcile record counts
+// 	if nr != uint64(recCount) {
+// 		t.Errorf("Found %d items", nr)
+// 	}
+
+// 	// Corrupt 10 records on target DB
+// 	corruptTargetDB(file_sourceDB, 10, &targetCollection)
+
+// 	sourceRecords := getSourceData(file_sourceDB)
+
+// 	for _, rec := range sourceRecords {
+// 		pt := Data.PaymentType{}
+
+// 		// Check Transaction IDs exist
+// 		err := targetCollection.FindFirst(&pt, bson.M{"transaction_id": rec[3]})
+
+// 		// if strings.HasSuffix(pt.Reference, "CORRUPT") {
+// 		// 	fmt.Println("here")
+// 		// }
+
+// 		if err != nil {
+// 			log.Fatal(err)
+// 		}
+
+// 		ps := Data.LoadPayment(rec)
+
+// 		changelog, _ := diff.Diff(ps, pt)
+
+// 		if len(changelog) != 0 {
+// 			t.Errorf("%v", changelog)
+// 		}
+
+// 	}
+
+// }
+
+// This test method populates the source DB (source_db.csv) with fake data
 func Test_populateSourceDB(t *testing.T) {
 	populateSourceDB(recCount, file_sourceDB)
 }
-
-// // a successful case
-// func TestShouldUpdateStats(t *testing.T) {
-// 	mock, err := pgxmock.NewPool()
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	defer mock.Close()
-
-// 	mock.ExpectBegin()
-// 	mock.ExpectExec("UPDATE products").
-// 		WillReturnResult(pgxmock.NewResult("UPDATE", 1))
-// 	mock.ExpectExec("INSERT INTO product_viewers").
-// 		WithArgs(2, 3).
-// 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
-// 	mock.ExpectCommit()
-
-// 	// now we execute our method
-// 	if err = recordStats(mock.Conn(), 2, 3); err != nil {
-// 		t.Errorf("error was not expected while updating: %s", err)
-// 	}
-
-// 	// we make sure that all expectations were met
-// 	if err := mock.ExpectationsWereMet(); err != nil {
-// 		t.Errorf("there were unfulfilled expectations: %s", err)
-// 	}
-// }
-
-// // a failing test case
-// func TestShouldRollbackStatUpdatesOnFailure(t *testing.T) {
-// 	mock, err := pgxmock.NewPool()
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	defer mock.Close()
-
-// 	mock.ExpectBegin()
-// 	mock.ExpectExec("UPDATE products").
-// 		WillReturnResult(pgxmock.NewResult("UPDATE", 1))
-// 	mock.ExpectExec("INSERT INTO product_viewers").
-// 		WithArgs(2, 3).
-// 		WillReturnError(fmt.Errorf("some error"))
-// 	mock.ExpectRollback()
-
-// 	// now we execute our method
-// 	if err = recordStats(mock.Conn(), 2, 3); err == nil {
-// 		t.Errorf("was expecting an error, but there was none")
-// 	}
-
-// 	// we make sure that all expectations were met
-// 	if err := mock.ExpectationsWereMet(); err != nil {
-// 		t.Errorf("there were unfulfilled expectations: %s", err)
-// 	}
-// }
