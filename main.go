@@ -14,26 +14,6 @@ import (
 	"github.com/mjarkk/mongomock"
 )
 
-// populateTargetDB0 populates the target database with the given number of records !DEPRECATED!
-// func populateTargetDB0(recCount int) mongomock.Collection {
-// 	db := mongomock.NewDB()
-// 	collection := db.Collection("transactions")
-
-// 	n := 0
-// 	for n < recCount {
-// 		pmnt := Data.GenPayment()
-
-// 		err := collection.Insert(pmnt)
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-// 		n++
-// 	}
-
-// 	return *collection
-
-// }
-
 // populateSourceDB populates the source DB (csv file!) with the given number of records. It will overwrite any existing data
 func populateSourceDB(recCount int, file_sourceDB string) {
 

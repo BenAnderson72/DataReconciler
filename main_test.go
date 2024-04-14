@@ -14,19 +14,6 @@ import (
 var recCount int = 1000
 var file_sourceDB string = "./data/source_db.csv"
 
-// func Test_populateTargetDB0(t *testing.T) {
-
-// 	collection := populateTargetDB0(recCount)
-
-// 	nr, _ := collection.Count(bson.M{})
-// 	// fmt.Printf("Found %d items", nr)
-
-// 	if nr != uint64(recCount) {
-// 		t.Errorf("Found %d items", nr)
-// 	}
-
-// }
-
 // corruptSourceDB corrupts the source DB (csv file!) by recCount # of records to give us something to reconcile
 // it returns the ids of the corrupt records
 func corruptTargetDB(file_sourceDB string, recCount int, collection *mongomock.Collection) []string {
@@ -119,49 +106,6 @@ func Test_reconcile(t *testing.T) {
 	}
 
 }
-
-// This test method populates the target mongoDB from the source DB (source_db.csv)
-// func Test_reconcile0(t *testing.T) {
-
-// 	targetCollection := populateTargetDB(file_sourceDB)
-
-// 	nr, _ := targetCollection.Count(bson.M{})
-
-// 	// Reconcile record counts
-// 	if nr != uint64(recCount) {
-// 		t.Errorf("Found %d items", nr)
-// 	}
-
-// 	// Corrupt 10 records on target DB
-// 	corruptTargetDB(file_sourceDB, 10, &targetCollection)
-
-// 	sourceRecords := getSourceData(file_sourceDB)
-
-// 	for _, rec := range sourceRecords {
-// 		pt := Data.PaymentType{}
-
-// 		// Check Transaction IDs exist
-// 		err := targetCollection.FindFirst(&pt, bson.M{"transaction_id": rec[3]})
-
-// 		// if strings.HasSuffix(pt.Reference, "CORRUPT") {
-// 		// 	fmt.Println("here")
-// 		// }
-
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-
-// 		ps := Data.LoadPayment(rec)
-
-// 		changelog, _ := diff.Diff(ps, pt)
-
-// 		if len(changelog) != 0 {
-// 			t.Errorf("%v", changelog)
-// 		}
-
-// 	}
-
-// }
 
 // This test method populates the source DB (source_db.csv) with fake data
 func Test_populateSourceDB(t *testing.T) {
