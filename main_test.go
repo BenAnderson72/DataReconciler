@@ -6,11 +6,11 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func Test_populateTargetDB(t *testing.T) {
+func Test_populateTargetDB0(t *testing.T) {
 
 	recCount := 100
 
-	collection := populateTargetDB(recCount)
+	collection := populateTargetDB0(recCount)
 
 	nr, _ := collection.Count(bson.M{})
 	// fmt.Printf("Found %d items", nr)
@@ -21,9 +21,24 @@ func Test_populateTargetDB(t *testing.T) {
 
 }
 
-// go test -run ^Test_populateSourceDB$ github.com/BenAnderson72/DataReconciler
+func Test_populateTargetDB(t *testing.T) {
+
+	collection := populateTargetDB(file_sourceDB)
+
+	nr, _ := collection.Count(bson.M{})
+	// fmt.Printf("Found %d items", nr)
+
+	if nr != uint64(1000) {
+		t.Errorf("Found %d items", nr)
+	}
+
+}
+
+var recCount int = 1000
+var file_sourceDB string = "./data/source_db.csv"
+
 func Test_populateSourceDB(t *testing.T) {
-	populateSourceDB(1000, "./data/source_db.csv")
+	populateSourceDB(recCount, file_sourceDB)
 }
 
 // // a successful case

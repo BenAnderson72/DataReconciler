@@ -2,10 +2,9 @@ package Data
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"math/rand"
-	"os"
+	"strconv"
 	"time"
 
 	"github.com/jaswdr/faker/v2"
@@ -21,6 +20,23 @@ type paymentType struct {
 	Amount           float64   `json:"amount"`
 	Currency         string    `json:"currency"`
 	Reference        string    `json:"description"`
+}
+
+func LoadPayment(values []string) *paymentType {
+
+	amt, _ := strconv.ParseFloat(values[4], 64)
+	time, _ := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", values[0])
+
+	return &paymentType{
+		Time:             time,
+		Sender_Account:   values[1],
+		Receiver_Account: values[2],
+		TransactionID:    values[3],
+		Amount:           amt,
+		Currency:         values[5],
+		Reference:        values[6],
+	}
+
 }
 
 // Deal with Floats not fixing dps
@@ -56,14 +72,4 @@ func GenPayment() paymentType {
 	// fake.Struct().Fill(&pmnt)
 
 	return pmnt
-}
-
-func WritePaymentToSource(pmnt paymentType, filename string) {
-
-	csvFile, err := os.Create("employee.csv")
-	if err != nil {
-		log.Fatalf("failed creating file: %s", err)
-	}
-	csvFile.Close()
-
 }

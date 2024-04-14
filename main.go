@@ -11,7 +11,7 @@ import (
 	"github.com/mjarkk/mongomock"
 )
 
-func populateTargetDB(recCount int) mongomock.Collection {
+func populateTargetDB0(recCount int) mongomock.Collection {
 	db := mongomock.NewDB()
 	collection := db.Collection("transactions")
 
@@ -59,13 +59,15 @@ func populateTargetDB(recCount int) mongomock.Collection {
 // 	return
 // }
 
-func populateSourceDB(recCount int, filename string) {
+func populateSourceDB(recCount int, file_sourceDB string) {
 
-	csvFile, err := os.Create(filename)
+	csvFile, err := os.Create(file_sourceDB)
 
 	if err != nil {
 		log.Fatalf("failed creating file: %s", err)
 	}
+
+	defer csvFile.Close()
 
 	w := csv.NewWriter(csvFile)
 
@@ -75,15 +77,43 @@ func populateSourceDB(recCount int, filename string) {
 
 		w.Write([]string{pmnt.Time.String(), pmnt.Sender_Account, pmnt.Receiver_Account, pmnt.TransactionID, fmt.Sprintf("%.2f", pmnt.Amount), pmnt.Currency, pmnt.Reference})
 
-		// this ensures faker creates really random data.
-		// TODO: Do this better!
-		// time.Sleep(1000 * time.Millisecond)
-
 		n++
 	}
 
 	w.Flush()
 
+}
+
+func populateTargetDB(file_sourceDB string) mongomock.Collection {
+
+	csvFile, err := os.Open(file_sourceDB)
+
+	if err != nil {
+		log.Fatalf("Error while reading the file: %s", err)
+	}
+
+	defer csvFile.Close()
+
+	reader := csv.NewReader(csvFile)
+
+	records, err := reader.ReadAll()
+
+	if err != nil {
+		log.Fatalf("Error while reading records: %s", err)
+	}
+
+	db := mongomock.NewDB()
+	collection := db.Collection("transactions")
+
+	for _, rec := range records {
+		pmnt := Data.LoadPayment(rec)
+		err := collection.Insert(pmnt)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+	}
+	return *collection
 }
 
 // func main0() {
